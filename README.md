@@ -16,6 +16,12 @@ Please refer to the
 - <strong>generate_flows_v2</strong> script for training the dataset of rectified flows
 - <strong>train_encoder_v2</strong> script for training the encoder
 
+How to clone and download pre-trained weights:
+```
+git clone https://github.com/maria-larchenko/modflows.git
+cd modflows; git clone https://huggingface.co/MariaLarchenko/modflows_color_encoder
+```
+
 Call `python3 run_inference.py --help` to see a full list of arguments for inference.
 `Ctrl+C` cancels the execution.
 
