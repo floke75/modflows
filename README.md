@@ -1,5 +1,7 @@
 # Color Transfer with Modulated Flows (AAAI 2025)
 
+arXiv: https://arxiv.org/abs/2503.19062
+
 This is the official implementation of AAAI 2025 paper "Color Transfer with Modulated Flows". 
 
 <p align="center">
