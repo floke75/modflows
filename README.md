@@ -34,9 +34,8 @@ Call `python3 run_inference.py --help` to see a full list of arguments for infer
 ## Citation
 If you use this code in your research, please cite our work:
 ```
-@inproceedings{larchenko2024color,
-  title={Color Style Transfer with Modulated Flows},
-  author={Larchenko, Maria and Lobashev, Alexander and Guskov, Dmitry and Palyulin, Vladimir Vladimirovich},
-  booktitle={ICML 2024 Workshop on Structured Probabilistic Inference $\{$$\backslash$\&$\}$ Generative Modeling}
-}
+@article{Larchenko_Lobashev_Guskov_Palyulin_2025, title={Color Transfer with Modulated Flows}, volume={39}, url={https://ojs.aaai.org/index.php/AAAI/article/view/32470},
+DOI={10.1609/aaai.v39i4.32470},  number={4},
+journal={Proceedings of the AAAI Conference on Artificial Intelligence},
+author={Larchenko, Maria and Lobashev, Alexander and Guskov, Dmitry and Palyulin, Vladimir Vladimirovich}, year={2025}, month={Apr.}, pages={4464-4472} }
 ```
