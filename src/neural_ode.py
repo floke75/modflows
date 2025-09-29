@@ -86,7 +86,7 @@ class NeuralODE(nn.Module):
             t = torch.ones((sample_size, 1)) * i / N
             t = t.to(self.device)
             z = z.to(self.device)
-            pred = self.forward(z, t)
+            pred = self.forward(z, 1-t)
             z = z.detach().clone() - pred * dt
             if i > int(strength * N):
                 break
