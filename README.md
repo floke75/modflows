@@ -21,7 +21,9 @@ Please refer to the
 How to clone and download pre-trained weights:
 ```
 git clone https://github.com/maria-larchenko/modflows.git
-cd modflows; git clone https://huggingface.co/MariaLarchenko/modflows_color_encoder
+cd modflows;
+sudo apt install git-lfs; git lfs install
+git clone https://huggingface.co/MariaLarchenko/modflows_color_encoder
 ```
 
 Call `python3 run_inference.py --help` to see a full list of arguments for inference.
