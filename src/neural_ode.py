@@ -10,12 +10,15 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 
 
 class NeuralODE(nn.Module):
-    """A neural ordinary differential equation model.
+    """Two-layer MLP that parameterizes the color transport ODE.
 
     Args:
-        input_dim (int): The dimension of the input.
-        device (torch.device): The device to run the model on.
-        hidden (int, optional): The number of hidden units. Defaults to 32.
+        input_dim (int): Dimensionality of the color space that will be
+            transformed (typically ``3`` for RGB).
+        device (torch.device): Compute device used for parameters and
+            integration.
+        hidden (int, optional): Width of the hidden layer used to approximate
+            the dynamics. Defaults to ``32``.
     """
     
     def __init__(self, input_dim, device, hidden=32):
@@ -43,10 +46,12 @@ class NeuralODE(nn.Module):
         self.to(self.device)
         
     def set_weights(self, e):
-        """Sets the weights of the model.
+        """Load a flattened parameter vector produced by the encoder.
 
         Args:
-            e (torch.Tensor): The weights to set.
+            e (torch.Tensor): One-dimensional tensor with ``self.total_params``
+                elements that contains ``layer_1`` and ``layer_2`` weights and
+                biases in row-major order.
         """
         assert len(e) == self.total_params
         splits = self.splits
@@ -65,14 +70,14 @@ class NeuralODE(nn.Module):
         self.to(self.device)
 
     def forward(self, x, t):
-        """The forward pass of the model.
+        """Evaluate the velocity field of the learned flow.
 
         Args:
-            x (torch.Tensor): The input tensor.
-            t (torch.Tensor): The time tensor.
+            x (torch.Tensor): Batch of sample points with shape ``(N, input_dim)``.
+            t (torch.Tensor): Matching time values with shape ``(N, 1)``.
 
         Returns:
-            torch.Tensor: The output of the model.
+            torch.Tensor: Estimated flow velocities with shape ``(N, output_dim)``.
         """
         xt = torch.cat([x, t], dim=1)
         xt = self.layer_1(xt)
@@ -82,15 +87,19 @@ class NeuralODE(nn.Module):
 
     @torch.no_grad()
     def sample(self, x0, N=10_000, strength=1.0):
-        """Samples from the model.
+        """Integrate the learned ODE forward in time using Euler steps.
 
         Args:
-            x0 (torch.Tensor): The initial condition.
-            N (int, optional): The number of steps. Defaults to 10_000.
-            strength (float, optional): The strength of the sampling. Defaults to 1.0.
+            x0 (torch.Tensor): Initial sample locations with shape
+                ``(num_samples, input_dim)``.
+            N (int, optional): Number of Euler steps to take. Defaults to
+                ``10_000``.
+            strength (float, optional): Fraction of the trajectory to trace.
+                ``1.0`` follows the full integration horizon while values
+                smaller than ``1`` perform an early stop. Defaults to ``1.0``.
 
         Returns:
-            torch.Tensor: The sampled tensor.
+            torch.Tensor: Final sample positions with the same shape as ``x0``.
         """
         sample_size = len(x0) 
         z = x0.detach().clone()
@@ -110,15 +119,18 @@ class NeuralODE(nn.Module):
 
     @torch.no_grad()
     def inv_sample(self, x0, N=10_000, strength=1.0):
-        """Samples from the model in reverse.
+        """Integrate the learned ODE backwards in time.
 
         Args:
-            x0 (torch.Tensor): The initial condition.
-            N (int, optional): The number of steps. Defaults to 10_000.
-            strength (float, optional): The strength of the sampling. Defaults to 1.0.
+            x0 (torch.Tensor): Initial sample locations with shape
+                ``(num_samples, input_dim)``.
+            N (int, optional): Number of Euler steps used during integration.
+                Defaults to ``10_000``.
+            strength (float, optional): Fraction of the trajectory to evaluate
+                before terminating early. Defaults to ``1.0``.
 
         Returns:
-            torch.Tensor: The sampled tensor.
+            torch.Tensor: Final sample positions after reverse integration.
         """
         sample_size = len(x0)
         z = x0.detach().clone()
@@ -134,18 +146,22 @@ class NeuralODE(nn.Module):
         return z.detach().clone()
 
 def train_ode(model, lr, base_x, targ_x, samples, sample_size, tt=None, text=None, shuffle=True):
-    """Trains the NeuralODE model.
+    """Optimize the flow model to match a target point cloud.
 
     Args:
-        model (NeuralODE): The model to train.
-        lr (float): The learning rate.
-        base_x (torch.Tensor): The base data.
-        targ_x (torch.Tensor): The target data.
-        samples (int): The number of samples to train for.
-        sample_size (int): The number of samples per batch.
-        tt (tqdm, optional): A tqdm progress bar. Defaults to None.
-        text (str, optional): Text to display on the progress bar. Defaults to None.
-        shuffle (bool, optional): Whether to shuffle the data. Defaults to True.
+        model (NeuralODE): Flow network to be optimized in-place.
+        lr (float): Learning rate used by the Adam optimizer.
+        base_x (torch.Tensor): Source samples with shape ``(dataset, dim)``.
+        targ_x (torch.Tensor): Target samples with the same shape as ``base_x``.
+        samples (int): Number of optimization iterations.
+        sample_size (int): Mini-batch size drawn from the datasets each
+            iteration.
+        tt (tqdm.std.tqdm or None): Progress bar for logging. Defaults to
+            ``None``.
+        text (str or None): Prefix appended to the progress bar description.
+            Defaults to ``None``.
+        shuffle (bool, optional): Whether to resample ``base_x`` on every
+            iteration. Defaults to ``True``.
     """
     data_size = base_x.shape[0]
     device = model.device
@@ -175,26 +191,28 @@ def train_ode(model, lr, base_x, targ_x, samples, sample_size, tt=None, text=Non
 
 
 def normal_to_uniform(x):
-    """Converts a normal distribution to a uniform distribution.
+    """Map standard normal samples to the unit cube.
 
     Args:
-        x (torch.Tensor): The input tensor.
+        x (torch.Tensor): Tensor of standard normal samples.
 
     Returns:
-        torch.Tensor: The converted tensor.
+        torch.Tensor: Tensor with values in ``[0, 1]`` obtained via the normal
+        cumulative distribution function applied element-wise.
     """
     return (torch.special.erf(x / np.sqrt(2)) + 1) / 2
 
 
 def uniform_latent(dim, data_size):
-    """Creates a uniform latent variable.
+    """Sample latent codes from a factorized uniform distribution.
 
     Args:
-        dim (int): The dimension of the latent variable.
-        data_size (int): The number of samples.
+        dim (int): Dimensionality of the latent space.
+        data_size (int): Number of samples to draw.
 
     Returns:
-        torch.Tensor: The latent variable.
+        torch.Tensor: Tensor with shape ``(data_size, dim)`` whose entries lie
+        in ``[0, 1]``.
     """
     base_mu = torch.zeros(dim)
     base_cov = torch.eye(dim)
@@ -204,15 +222,16 @@ def uniform_latent(dim, data_size):
     
 
 def create_save_path(filepath, dataset_root, flows_root):
-    """Creates a save path for a model.
+    """Derive the directory used to store a trained flow model.
 
     Args:
-        filepath (str): The path to the image.
-        dataset_root (str): The root directory of the dataset.
-        flows_root (str): The root directory of the flows.
+        filepath (str): Absolute path of an input image.
+        dataset_root (str): Root directory that contains the dataset images.
+        flows_root (str): Root directory where the trained flow checkpoints are
+            written.
 
     Returns:
-        str: The save path.
+        str: Directory that mirrors the dataset structure under ``flows_root``.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

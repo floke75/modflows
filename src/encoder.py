@@ -13,16 +13,27 @@ INPUT_SIZE = 528
 
 
 def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
-    """Preprocesses a PIL image for the encoder.
+    """Prepare an RGB image so it can be consumed by :class:`Encoder`.
+
+    The preprocessing pipeline mirrors the transformation stack used by the
+    EfficientNet encoders.  Depending on ``image`` the function either returns
+    the transformed PIL image (to allow manual inspection) or a tensor with the
+    channel-first layout that the encoder expects.
 
     Args:
-        pil_image (PIL.Image.Image): The input image.
-        crop (bool, optional): Whether to crop the image. Defaults to False.
-        image (bool, optional): Whether to return the preprocessed image as a PIL image. Defaults to False.
-        rand_trans (bool, optional): Whether to apply random transformations. Defaults to False.
+        pil_image (PIL.Image.Image): Input image in RGB mode.
+        crop (bool, optional): If ``True`` the shorter side is centrally
+            cropped before resizing. Defaults to ``False``.
+        image (bool, optional): When ``True`` the transformed PIL image is
+            returned instead of a tensor. Defaults to ``False``.
+        rand_trans (bool, optional): Apply random horizontal flips and a random
+            90-degree rotation.  Used only for data augmentation during
+            training. Defaults to ``False``.
 
     Returns:
-        torch.Tensor or PIL.Image.Image: The preprocessed image.
+        torch.Tensor or PIL.Image.Image: When ``image`` is ``False`` a float
+        tensor with shape ``(3, INPUT_SIZE, INPUT_SIZE)`` and values in ``[0, 1]``.
+        Otherwise the transformed PIL image.
     """
     im = pil_image
     im_size = (INPUT_SIZE, INPUT_SIZE)
@@ -43,15 +54,26 @@ def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
 
 
 class Encoder(nn.Module):
-    """An encoder model for image stylization.
+    """EfficientNet-based encoder that predicts flow parameters.
+
+    The encoder projects an RGB image onto the parameter space of the
+    :class:`~src.neural_ode.NeuralODE` color flow.  The ``input_dim``,
+    ``hidden`` and ``output_dim`` arguments describe the architecture of that
+    downstream flow network and are used to reshape the flattened EfficientNet
+    logits into layer-wise weights.
 
     Args:
-        k_dim (int): The dimension of the output.
-        input_dim (int): The dimension of the input.
-        hidden (int): The number of hidden units.
-        output_dim (int): The dimension of the output.
-        device (torch.device): The device to run the model on.
-        encoder_type (str, optional): The type of encoder to use. Defaults to "B6".
+        k_dim (int): Number of parameters the encoder should output (equal to
+            the total parameters of the target flow network).
+        input_dim (int): Number of channels in the flow input (typically three
+            RGB channels plus the time component).
+        hidden (int): Width of the hidden layer in the flow network.
+        output_dim (int): Number of channels produced by the flow network (for
+            color transfer this is ``3``).
+        device (torch.device): Device that stores the encoder and intermediate
+            tensors.
+        encoder_type (str, optional): Name of the EfficientNet backbone. Must
+            be ``"B6"`` or ``"B0"``. Defaults to ``"B6"``.
     """
     
     def __init__(self, k_dim, input_dim, hidden, output_dim, device, encoder_type="B6"):
@@ -81,13 +103,14 @@ class Encoder(nn.Module):
         self.to(device)
         
     def forward(self, im1):
-        """Forward pass of the encoder.
+        """Encode a batch of RGB images.
 
         Args:
-            im1 (torch.Tensor): The input image.
+            im1 (torch.Tensor): Batch of images with shape ``(N, 3, H, W)`` and
+                values in ``[0, 1]``.
 
         Returns:
-            torch.Tensor: The output of the encoder.
+            torch.Tensor: Flattened parameter vectors with shape ``(N, k_dim)``.
         """
         # the input should be [batch_size, channels, height, width]
         with torch.no_grad():
@@ -95,15 +118,18 @@ class Encoder(nn.Module):
         return self.model(im1)
     
     def apply_e(self, e, x, t):
-        """Applies the encoded style to the input.
+        """Evaluate the decoded flow parameters on sample points.
 
         Args:
-            e (torch.Tensor): The encoded style.
-            x (torch.Tensor): The input tensor.
-            t (torch.Tensor): The time tensor.
+            e (torch.Tensor): Batch of flattened parameter vectors produced by
+                :meth:`forward` with shape ``(N, k_dim)``.
+            x (torch.Tensor): Sampled RGB values of shape ``(N, M, input_dim)``
+                that will be transformed by the flow network.
+            t (torch.Tensor): Time values with shape ``(N, M, 1)`` associated
+                with each sample in ``x``.
 
         Returns:
-            torch.Tensor: The stylized output.
+            torch.Tensor: Flow predictions with shape ``(N, M, output_dim)``.
         """
         splits = self.splits
         batch_size = e.shape[0]

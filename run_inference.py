@@ -9,8 +9,8 @@ from src.encoder import Encoder
 from src.inference import run_inference, run_inference_flow
 
 
-if __name__ == "__main__":
-    """The main execution block."""
+def main():
+    """Run the command-line interface for batched color stylization."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--content", type=str, default="./data/content/", help='Content folder')
     parser.add_argument("--style", type=str, default="./data/style/", help='Reference folder')
@@ -63,6 +63,10 @@ if __name__ == "__main__":
         # print(f"{i}/{N}:: ", cont_name, "   --------- to ---------  ", style_name)
         im_1 = content_dir + cont_name
         im_2 = style_dir + style_name
-        imgs = run_inference(encoder, device, im_1, im_2, enc_steps=steps, strength=strength);
+        imgs = run_inference(encoder, device, im_1, im_2, enc_steps=steps, strength=strength)
         im = imgs[2].save(results_dir + cont_name)
     print("DONE")
+
+
+if __name__ == "__main__":
+    main()
