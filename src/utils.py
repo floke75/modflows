@@ -10,12 +10,26 @@ from PIL import Image
 
 
 def clean_dirs(dir_list):
+    """Removes .ipynb_checkpoints directories.
+
+    Args:
+        dir_list (list): A list of directories to clean.
+    """
     for dir_name in dir_list:
         if os.path.exists(dir_name + '.ipynb_checkpoints'):
             shutil.rmtree(dir_name + '.ipynb_checkpoints')
 
 
 def load_filenames(path, verbose=False):
+    """Loads all filenames from a directory.
+
+    Args:
+        path (str): The path to the directory.
+        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+
+    Returns:
+        list: A list of filenames.
+    """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
         if verbose:
@@ -29,9 +43,15 @@ def load_filenames(path, verbose=False):
 
 
 def create_save_path(filepath, dataset_root, flows_root):
-    """
-    Takes on input filepath to an image in a dataset_root folder
-    and creates the same dirs in a flows_root folder to save a model.
+    """Creates a save path for a model.
+
+    Args:
+        filepath (str): The path to the image.
+        dataset_root (str): The root directory of the dataset.
+        flows_root (str): The root directory of the flows.
+
+    Returns:
+        str: The save path.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)
@@ -43,14 +63,28 @@ def create_save_path(filepath, dataset_root, flows_root):
 
 
 def get_flow_id(filepath):
+    """Gets the flow ID from a filepath.
+
+    Args:
+        filepath (str): The path to the file.
+
+    Returns:
+        str: The flow ID.
+    """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model.pt"
 
 
 def get_flow_path(filepath, dataset_root, flows_root):
-    """
-    Takes on input filepath to an image in a dataset_root folder
-    and returns the corresponded model in a flows_root.
+    """Gets the flow path from a filepath.
+
+    Args:
+        filepath (str): The path to the file.
+        dataset_root (str): The root directory of the dataset.
+        flows_root (str): The root directory of the flows.
+
+    Returns:
+        str: The flow path.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)
@@ -61,6 +95,18 @@ def get_flow_path(filepath, dataset_root, flows_root):
 
 
 def print_images(pil_imgs, with_density=False, points=200, titles=None, s=10):
+    """Prints a list of PIL images.
+
+    Args:
+        pil_imgs (list): A list of PIL images.
+        with_density (bool, optional): Whether to print the density of the image. Defaults to False.
+        points (int, optional): The number of points to use for the density plot. Defaults to 200.
+        titles (list, optional): A list of titles for the images. Defaults to None.
+        s (int, optional): The size of the points in the density plot. Defaults to 10.
+
+    Returns:
+        matplotlib.figure.Figure: The figure containing the images.
+    """
     fig = plt.figure(figsize=(20, 10))
     n = len(pil_imgs)
     azim = 236 #np.random.uniform(0,360)

@@ -33,11 +33,27 @@ PRETRAINED_EPOCH = 700000
 
 
 def get_encoder_path(epoch):
+    """Gets the path to save the encoder.
+
+    Args:
+        epoch (int): The current epoch.
+
+    Returns:
+        str: The path to save the encoder.
+    """
     timestamp = datetime.now().strftime('%Y.%m.%d %H-%M-%S')
     return SAVE[0] + timestamp + SAVE[1] + f"_epoch_{1 + epoch + PRETRAINED_EPOCH}"
 
 
 def load_filenames(path):
+    """Loads all filenames from a directory.
+
+    Args:
+        path (str): The path to the directory.
+
+    Returns:
+        list: A list of filenames.
+    """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
         print(f"{dirpath} : {len(filenames)}")
@@ -48,14 +64,28 @@ def load_filenames(path):
 
 
 def get_flow_id(filepath):
+    """Gets the flow ID from a filepath.
+
+    Args:
+        filepath (str): The path to the file.
+
+    Returns:
+        str: The flow ID.
+    """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model"
 
 
 def get_flow_path(filepath, dataset_root, flows_root):
-    """
-    Takes on input filepath to an image in a dataset_root folder
-    and returns the corresponded model in a flows_root.
+    """Gets the flow path from a filepath.
+
+    Args:
+        filepath (str): The path to the file.
+        dataset_root (str): The root directory of the dataset.
+        flows_root (str): The root directory of the flows.
+
+    Returns:
+        str: The flow path.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

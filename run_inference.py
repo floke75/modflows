@@ -10,6 +10,7 @@ from src.inference import run_inference, run_inference_flow
 
 
 if __name__ == "__main__":
+    """The main execution block."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--content", type=str, default="./data/content/", help='Content folder')
     parser.add_argument("--style", type=str, default="./data/style/", help='Reference folder')
