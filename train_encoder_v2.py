@@ -33,26 +33,28 @@ PRETRAINED_EPOCH = 700000
 
 
 def get_encoder_path(epoch):
-    """Gets the path to save the encoder.
+    """Construct a timestamped filename for an encoder checkpoint.
 
     Args:
-        epoch (int): The current epoch.
+        epoch (int): Zero-based index of the current optimization epoch.
 
     Returns:
-        str: The path to save the encoder.
+        str: Path (relative to the repository root) of the checkpoint that will
+        be written.
     """
     timestamp = datetime.now().strftime('%Y.%m.%d %H-%M-%S')
     return SAVE[0] + timestamp + SAVE[1] + f"_epoch_{1 + epoch + PRETRAINED_EPOCH}"
 
 
 def load_filenames(path):
-    """Loads all filenames from a directory.
+    """Enumerate dataset images that will be used for training.
 
     Args:
-        path (str): The path to the directory.
+        path (str): Root directory containing the training images.
 
     Returns:
-        list: A list of filenames.
+        list[str]: Absolute paths to every file discovered under ``path``. This
+        helper does not filter by extension.
     """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
@@ -64,28 +66,31 @@ def load_filenames(path):
 
 
 def get_flow_id(filepath):
-    """Gets the flow ID from a filepath.
+    """Derive the filename of the flow checkpoint paired with an image.
 
     Args:
-        filepath (str): The path to the file.
+        filepath (str): Absolute path to the dataset image.
 
     Returns:
-        str: The flow ID.
+        str: Name of the checkpoint file without directory information. The
+        ``"_model"`` suffix mirrors the convention used when exporting flows.
     """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model"
 
 
 def get_flow_path(filepath, dataset_root, flows_root):
-    """Gets the flow path from a filepath.
+    """Resolve the checkpoint path that corresponds to ``filepath``.
 
     Args:
-        filepath (str): The path to the file.
-        dataset_root (str): The root directory of the dataset.
-        flows_root (str): The root directory of the flows.
+        filepath (str): Absolute path to the dataset image.
+        dataset_root (str): Common prefix of all dataset paths.
+        flows_root (str): Directory that mirrors the dataset structure for
+            storing checkpoints.
 
     Returns:
-        str: The flow path.
+        str: Full path to the associated flow checkpoint. The caller is
+        responsible for ensuring the parent directory exists.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

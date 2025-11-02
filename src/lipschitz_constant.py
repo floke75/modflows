@@ -1,19 +1,22 @@
 import numpy as np
 from tqdm import tqdm
-from encoder import enc_preprocess
+from src.encoder import enc_preprocess
 from PIL import Image
 import os
 
 def compute_lipschitz_vectorized(x, y, num_samples):
-    """Computes the Lipschitz constant between two images.
+    """Estimate an upper bound on the Lipschitz constant between two clouds.
 
     Args:
-        x (np.ndarray): The first image.
-        y (np.ndarray): The second image.
-        num_samples (int): The number of samples to use.
+        x (np.ndarray): Array that can be reshaped to ``(-1, 3)`` representing
+            RGB samples from the stylized image.
+        y (np.ndarray): Array that can be reshaped to ``(-1, 3)`` with RGB
+            samples from the reference image.
+        num_samples (int): Number of random point pairs used for the estimate.
 
     Returns:
-        float: The Lipschitz constant.
+        float: Maximum ratio of pairwise distances found across the sampled
+        pairs.
     """
     # Flatten the arrays to create lists of 3D points
     x_flat = x.reshape(-1, 3)

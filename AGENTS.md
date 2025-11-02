@@ -1,25 +1,34 @@
 ## Project Overview
 
-This repository contains the implementation of "Color Transfer with Modulated Flows," a deep learning model for color transfer between images. The model is based on neural ordinary differential equations (NODEs) and uses a modulated flow to learn the color distribution of a style image and apply it to a content image.
+This repository contains the implementation of "Color Transfer with Modulated Flows," a neural color-transfer pipeline based on neural ordinary differential equations (NODEs). The system first trains color transport flows for each image and then trains an encoder to predict the flow parameters directly from RGB pixels so the effect can be applied at inference time.
 
-### Key Components
+### Repository layout
 
-*   **`src/encoder.py`**: Defines the `Encoder` class, which is a convolutional neural network (CNN) that learns a compact representation of the color distribution of an image.
-*   **`src/neural_ode.py`**: Defines the `NeuralODE` class, which is a neural ordinary differential equation model that learns the color flow between two images.
-*   **`src/inference.py`**: Contains functions for running inference with the model, including `run_inference` and `run_inference_flow`.
-*   **`generate_flows_v2.py`**: A script for training the dataset of rectified flows.
-*   **`train_encoder_v2.py`**: A script for training the encoder.
-*   **`run_inference.py`**: A script for running inference with the model.
+* **`src/encoder.py`** – EfficientNet-based encoder that predicts flattened NODE weights. The helper `enc_preprocess` mirrors the data preparation used throughout training and analysis scripts.
+* **`src/neural_ode.py`** – Lightweight NODE implementation, Euler integration utilities, and helpers for sampling latent color codes.
+* **`src/inference.py`** – High-level helpers for stylizing an image pair (encoder-driven or via saved flow checkpoints) plus visualization utilities.
+* **`generate_flows_v2.py`** – Offline rectified-flow generator. Uses `enc_preprocess` to build the base distribution and trains a `NeuralODE` per image.
+* **`train_encoder_v2.py`** – Offline encoder training loop that distills pre-computed flows into a single predictor.
+* **`run_inference.py`** – Command-line interface that stylizes a batch of image pairs using a trained encoder.
 
-### How it Works
+Training data is expected under `data/` (mirroring the original experiments). Flow checkpoints live under `check_points/` and encoder checkpoints under `checkpoints/` by default. Adjust the constants at the top of the scripts when targeting a different layout.
 
-The model works by first training a set of rectified flows on a dataset of images. Each flow learns to transform the color distribution of one image to another. Then, an encoder is trained to predict the parameters of the flow that will transform a content image to a style image.
+### Workflow summary
 
-During inference, the encoder takes a content image and a style image as input and predicts the parameters of the flow that will transform the content image to the style image. The flow is then used to transform the content image, resulting in a new image with the color distribution of the style image.
+1. Generate rectified flows with `python generate_flows_v2.py`. This script enumerates every file beneath `LOAD` and writes checkpoints under `SAVE`, mirroring the dataset structure.
+2. Train the encoder with `python train_encoder_v2.py`. Ensure the `FLOW` directory points to the flow checkpoints produced in step 1. The script periodically writes encoder checkpoints with timestamped filenames.
+3. Stylize new images either via `python run_inference.py` (encoder-driven; expects parallel content/style directories) or by calling `run_inference_flow` from `src.inference` when working with individual flow checkpoints.
 
-### Development Guidelines
+### Development guidelines
 
-*   All new code should be documented with Google Style Python Docstrings.
-*   All new functions should have corresponding unit tests.
-*   All code should be formatted with `black`.
-*   All code should be linted with `pylint`.
+* Use Google Style docstrings for any new public functions, methods, or modules. Keep shape/dtype descriptions accurate—``NeuralODE`` uses `input_dim + 1` internally to account for time.
+* Prefer deterministic RNG seeds when adding new training or evaluation utilities.
+* Format Python code with `black` and keep imports sorted (``isort`` compatible).
+* Run `python -m compileall src` before submitting a PR to catch syntax errors. Add targeted unit tests under `tests/` when extending the core library.
+* Large training scripts log progress with `tqdm`; follow the existing patterns when adding new loops so notebook and CLI usage stay consistent.
+
+### Communication expectations
+
+* When updating documentation, ensure references to tensor shapes, devices, and directory conventions mirror the actual code paths.
+* Prefer raising informative `ValueError`s over silent failure for CLI additions.
+* Keep PR descriptions concise but explicit about affected scripts (`encoder`, `neural_ode`, etc.).
