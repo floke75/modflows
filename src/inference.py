@@ -10,6 +10,14 @@ from src.encoder import Encoder, enc_preprocess
 
 
 def load_filenames(path):
+    """Loads all filenames from a directory.
+
+    Args:
+        path (str): The path to the directory.
+
+    Returns:
+        list: A list of filenames.
+    """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
         print(f"{dirpath} : {len(filenames)}")
@@ -20,6 +28,18 @@ def load_filenames(path):
 
 
 def print_images(pil_imgs, with_density=False, points=200, titles=None, s=10):
+    """Prints a list of PIL images.
+
+    Args:
+        pil_imgs (list): A list of PIL images.
+        with_density (bool, optional): Whether to print the density of the image. Defaults to False.
+        points (int, optional): The number of points to use for the density plot. Defaults to 200.
+        titles (list, optional): A list of titles for the images. Defaults to None.
+        s (int, optional): The size of the points in the density plot. Defaults to 10.
+
+    Returns:
+        matplotlib.figure.Figure: The figure containing the images.
+    """
     fig = plt.figure(figsize=(20, 10))
     n = len(pil_imgs)
     azim = 236 #np.random.uniform(0,360)
@@ -56,6 +76,16 @@ def print_images(pil_imgs, with_density=False, points=200, titles=None, s=10):
 
 
 def tensor_to_im(tensor, w, h):
+    """Converts a tensor to a PIL image.
+
+    Args:
+        tensor (torch.Tensor): The input tensor.
+        w (int): The width of the image.
+        h (int): The height of the image.
+
+    Returns:
+        PIL.Image.Image: The converted image.
+    """
     tensor = tensor.detach().cpu()
     tensor = torch.clip(tensor, 0, 1)
     tensor = tensor.reshape((h, w, 3)) * 255
@@ -64,8 +94,23 @@ def tensor_to_im(tensor, w, h):
 
 
 # @torch.no_grad()
-def run_inference(encoder, device, content_im_path, style_im_path, 
+def run_inference(encoder, device, content_im_path, style_im_path,
                   compress=False, enc_steps=3, strength=1.0, crop=False):
+    """Runs inference on a content and style image.
+
+    Args:
+        encoder (Encoder): The encoder model.
+        device (torch.device): The device to run the model on.
+        content_im_path (str): The path to the content image.
+        style_im_path (str): The path to the style image.
+        compress (bool, optional): Whether to compress the image. Defaults to False.
+        enc_steps (int, optional): The number of encoding steps. Defaults to 3.
+        strength (float, optional): The strength of the stylization. Defaults to 1.0.
+        crop (bool, optional): Whether to crop the image. Defaults to False.
+
+    Returns:
+        tuple: A tuple containing the content image, the latent image, the styled image, and the style image.
+    """
     with torch.no_grad():
         encoder.eval()
         
@@ -111,9 +156,24 @@ def run_inference(encoder, device, content_im_path, style_im_path,
 
 
 # @torch.no_grad()
-def run_inference_flow(device, content_flow_path, target_flow_path, content_im_path, 
+def run_inference_flow(device, content_flow_path, target_flow_path, content_im_path,
                        hidden=64, enc_steps=3, strength=1.0, compress=None):
-    with torch.no_grad():                       
+    """Runs inference on a content and style image using a flow model.
+
+    Args:
+        device (torch.device): The device to run the model on.
+        content_flow_path (str): The path to the content flow model.
+        target_flow_path (str): The path to the target flow model.
+        content_im_path (str): The path to the content image.
+        hidden (int, optional): The number of hidden units. Defaults to 64.
+        enc_steps (int, optional): The number of encoding steps. Defaults to 3.
+        strength (float, optional): The strength of the stylization. Defaults to 1.0.
+        compress (float, optional): The compression factor. Defaults to None.
+
+    Returns:
+        tuple: A tuple containing the content image, the latent image, and the styled image.
+    """
+    with torch.no_grad():
         content_im = Image.open(content_im_path).convert('RGB')
     
         base_flow_params = torch.load(content_flow_path, map_location=device)

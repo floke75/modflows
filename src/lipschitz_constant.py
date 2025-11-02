@@ -5,12 +5,15 @@ from PIL import Image
 import os
 
 def compute_lipschitz_vectorized(x, y, num_samples):
-    """
+    """Computes the Lipschitz constant between two images.
+
     Args:
-        x, y: Input images as numpy arrays (H,W,C)
-        num_samples: Number of point pairs to sample
+        x (np.ndarray): The first image.
+        y (np.ndarray): The second image.
+        num_samples (int): The number of samples to use.
+
     Returns:
-        Maximum Lipschitz constant ratio 
+        float: The Lipschitz constant.
     """
     # Flatten the arrays to create lists of 3D points
     x_flat = x.reshape(-1, 3)

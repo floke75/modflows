@@ -18,7 +18,53 @@ Please refer to the
 - <strong>generate_flows_v2</strong> script for training the dataset of rectified flows
 - <strong>train_encoder_v2</strong> script for training the encoder
 
-How to clone and download pre-trained weights:
+## Getting Started
+
+### Prerequisites
+
+* Python 3.8+
+* PyTorch
+* torchvision
+* NumPy
+* Matplotlib
+* Pillow
+* tqdm
+* einops
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/maria-larchenko/modflows.git
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd modflows
+   ```
+3. Install the required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Usage
+
+1. **Download the pre-trained weights:**
+   ```bash
+   sudo apt install git-lfs
+   git lfs install
+   git clone https://huggingface.co/MariaLarchenko/modflows_color_encoder
+   ```
+2. **Run inference:**
+   ```bash
+   python3 run_inference.py --content <path_to_content_images> --style <path_to_style_images> --output <path_to_output_directory>
+   ```
+
+   For a full list of arguments, run:
+   ```bash
+   python3 run_inference.py --help
+   ```
+
+## How to clone and download pre-trained weights:
 ```
 git clone https://github.com/maria-larchenko/modflows.git
 cd modflows;

@@ -26,6 +26,14 @@ SAVE = 'check_points/latent_flow_merged_8195/'
 
 
 def load_filenames(path):
+    """Loads all filenames from a directory.
+
+    Args:
+        path (str): The path to the directory.
+
+    Returns:
+        list: A list of filenames.
+    """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
         print(f"{dirpath} : {len(filenames)}")
@@ -36,10 +44,27 @@ def load_filenames(path):
     
 
 def normal_to_uniform(x):
+    """Converts a normal distribution to a uniform distribution.
+
+    Args:
+        x (torch.Tensor): The input tensor.
+
+    Returns:
+        torch.Tensor: The converted tensor.
+    """
     return (torch.special.erf(x / np.sqrt(2)) + 1) / 2
 
 
 def uniform_latent(dim, data_size):
+    """Creates a uniform latent variable.
+
+    Args:
+        dim (int): The dimension of the latent variable.
+        data_size (int): The number of samples.
+
+    Returns:
+        torch.Tensor: The latent variable.
+    """
     base_mu = torch.zeros(dim)
     base_cov = torch.eye(dim)
     latent_dist = MultivariateNormal(base_mu, base_cov)
@@ -48,14 +73,28 @@ def uniform_latent(dim, data_size):
 
 
 def get_flow_id(filepath):
+    """Gets the flow ID from a filepath.
+
+    Args:
+        filepath (str): The path to the file.
+
+    Returns:
+        str: The flow ID.
+    """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model_515"
 
 
 def create_save_path(filepath, dataset_root, flows_root):
-    """
-    Takes on input filepath to an image in a dataset_root folder
-    and creates the same dirs in a flows_root folder to save a model.
+    """Creates a save path for a model.
+
+    Args:
+        filepath (str): The path to the image.
+        dataset_root (str): The root directory of the dataset.
+        flows_root (str): The root directory of the flows.
+
+    Returns:
+        str: The save path.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

@@ -13,6 +13,17 @@ INPUT_SIZE = 528
 
 
 def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
+    """Preprocesses a PIL image for the encoder.
+
+    Args:
+        pil_image (PIL.Image.Image): The input image.
+        crop (bool, optional): Whether to crop the image. Defaults to False.
+        image (bool, optional): Whether to return the preprocessed image as a PIL image. Defaults to False.
+        rand_trans (bool, optional): Whether to apply random transformations. Defaults to False.
+
+    Returns:
+        torch.Tensor or PIL.Image.Image: The preprocessed image.
+    """
     im = pil_image
     im_size = (INPUT_SIZE, INPUT_SIZE)
     enc_shape = (3, INPUT_SIZE, INPUT_SIZE)  #  (1, 3, INPUT_SIZE, INPUT_SIZE)
@@ -32,6 +43,16 @@ def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
 
 
 class Encoder(nn.Module):
+    """An encoder model for image stylization.
+
+    Args:
+        k_dim (int): The dimension of the output.
+        input_dim (int): The dimension of the input.
+        hidden (int): The number of hidden units.
+        output_dim (int): The dimension of the output.
+        device (torch.device): The device to run the model on.
+        encoder_type (str, optional): The type of encoder to use. Defaults to "B6".
+    """
     
     def __init__(self, k_dim, input_dim, hidden, output_dim, device, encoder_type="B6"):
         super().__init__()
@@ -60,12 +81,30 @@ class Encoder(nn.Module):
         self.to(device)
         
     def forward(self, im1):
+        """Forward pass of the encoder.
+
+        Args:
+            im1 (torch.Tensor): The input image.
+
+        Returns:
+            torch.Tensor: The output of the encoder.
+        """
         # the input should be [batch_size, channels, height, width]
         with torch.no_grad():
             im1 = self.resize(im1)
         return self.model(im1)
     
     def apply_e(self, e, x, t):
+        """Applies the encoded style to the input.
+
+        Args:
+            e (torch.Tensor): The encoded style.
+            x (torch.Tensor): The input tensor.
+            t (torch.Tensor): The time tensor.
+
+        Returns:
+            torch.Tensor: The stylized output.
+        """
         splits = self.splits
         batch_size = e.shape[0]
         shapes = [

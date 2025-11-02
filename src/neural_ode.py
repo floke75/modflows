@@ -10,6 +10,13 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 
 
 class NeuralODE(nn.Module):
+    """A neural ordinary differential equation model.
+
+    Args:
+        input_dim (int): The dimension of the input.
+        device (torch.device): The device to run the model on.
+        hidden (int, optional): The number of hidden units. Defaults to 32.
+    """
     
     def __init__(self, input_dim, device, hidden=32):
         super().__init__()
@@ -36,6 +43,11 @@ class NeuralODE(nn.Module):
         self.to(self.device)
         
     def set_weights(self, e):
+        """Sets the weights of the model.
+
+        Args:
+            e (torch.Tensor): The weights to set.
+        """
         assert len(e) == self.total_params
         splits = self.splits
         shapes = self.shapes
@@ -53,6 +65,15 @@ class NeuralODE(nn.Module):
         self.to(self.device)
 
     def forward(self, x, t):
+        """The forward pass of the model.
+
+        Args:
+            x (torch.Tensor): The input tensor.
+            t (torch.Tensor): The time tensor.
+
+        Returns:
+            torch.Tensor: The output of the model.
+        """
         xt = torch.cat([x, t], dim=1)
         xt = self.layer_1(xt)
         xt = self.activation(xt)
@@ -61,6 +82,16 @@ class NeuralODE(nn.Module):
 
     @torch.no_grad()
     def sample(self, x0, N=10_000, strength=1.0):
+        """Samples from the model.
+
+        Args:
+            x0 (torch.Tensor): The initial condition.
+            N (int, optional): The number of steps. Defaults to 10_000.
+            strength (float, optional): The strength of the sampling. Defaults to 1.0.
+
+        Returns:
+            torch.Tensor: The sampled tensor.
+        """
         sample_size = len(x0) 
         z = x0.detach().clone()
         dt = 1.0 / N
@@ -79,6 +110,16 @@ class NeuralODE(nn.Module):
 
     @torch.no_grad()
     def inv_sample(self, x0, N=10_000, strength=1.0):
+        """Samples from the model in reverse.
+
+        Args:
+            x0 (torch.Tensor): The initial condition.
+            N (int, optional): The number of steps. Defaults to 10_000.
+            strength (float, optional): The strength of the sampling. Defaults to 1.0.
+
+        Returns:
+            torch.Tensor: The sampled tensor.
+        """
         sample_size = len(x0)
         z = x0.detach().clone()
         dt = 1.0 / N
@@ -93,6 +134,19 @@ class NeuralODE(nn.Module):
         return z.detach().clone()
 
 def train_ode(model, lr, base_x, targ_x, samples, sample_size, tt=None, text=None, shuffle=True):
+    """Trains the NeuralODE model.
+
+    Args:
+        model (NeuralODE): The model to train.
+        lr (float): The learning rate.
+        base_x (torch.Tensor): The base data.
+        targ_x (torch.Tensor): The target data.
+        samples (int): The number of samples to train for.
+        sample_size (int): The number of samples per batch.
+        tt (tqdm, optional): A tqdm progress bar. Defaults to None.
+        text (str, optional): Text to display on the progress bar. Defaults to None.
+        shuffle (bool, optional): Whether to shuffle the data. Defaults to True.
+    """
     data_size = base_x.shape[0]
     device = model.device
     optim = torch.optim.Adam(model.parameters(), lr=lr)
@@ -121,10 +175,27 @@ def train_ode(model, lr, base_x, targ_x, samples, sample_size, tt=None, text=Non
 
 
 def normal_to_uniform(x):
+    """Converts a normal distribution to a uniform distribution.
+
+    Args:
+        x (torch.Tensor): The input tensor.
+
+    Returns:
+        torch.Tensor: The converted tensor.
+    """
     return (torch.special.erf(x / np.sqrt(2)) + 1) / 2
 
 
 def uniform_latent(dim, data_size):
+    """Creates a uniform latent variable.
+
+    Args:
+        dim (int): The dimension of the latent variable.
+        data_size (int): The number of samples.
+
+    Returns:
+        torch.Tensor: The latent variable.
+    """
     base_mu = torch.zeros(dim)
     base_cov = torch.eye(dim)
     latent_dist = MultivariateNormal(base_mu, base_cov)
@@ -133,9 +204,15 @@ def uniform_latent(dim, data_size):
     
 
 def create_save_path(filepath, dataset_root, flows_root):
-    """
-    Takes on input filepath to an image in a dataset_root folder
-    and creates the same dirs in a flows_root folder to save a model.
+    """Creates a save path for a model.
+
+    Args:
+        filepath (str): The path to the image.
+        dataset_root (str): The root directory of the dataset.
+        flows_root (str): The root directory of the flows.
+
+    Returns:
+        str: The save path.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)
