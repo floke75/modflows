@@ -16,7 +16,9 @@ def clean_dirs(dir_list):
 
     Args:
         dir_list (Iterable[str]): Directories whose ``.ipynb_checkpoints``
-            folders should be deleted if present.
+            folders should be deleted if present. Each entry is expected to be
+            the directory prefix (e.g. ``"data/train/"``) without the trailing
+            ``.ipynb_checkpoints`` component.
     """
     for dir_name in dir_list:
         if os.path.exists(dir_name + '.ipynb_checkpoints'):

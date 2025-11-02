@@ -39,7 +39,8 @@ def get_encoder_path(epoch):
         epoch (int): Zero-based index of the current optimization epoch.
 
     Returns:
-        str: Absolute path of the checkpoint that will be written.
+        str: Path (relative to the repository root) of the checkpoint that will
+        be written.
     """
     timestamp = datetime.now().strftime('%Y.%m.%d %H-%M-%S')
     return SAVE[0] + timestamp + SAVE[1] + f"_epoch_{1 + epoch + PRETRAINED_EPOCH}"
@@ -52,7 +53,8 @@ def load_filenames(path):
         path (str): Root directory containing the training images.
 
     Returns:
-        list[str]: Absolute paths to every file discovered under ``path``.
+        list[str]: Absolute paths to every file discovered under ``path``. This
+        helper does not filter by extension.
     """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
@@ -70,7 +72,8 @@ def get_flow_id(filepath):
         filepath (str): Absolute path to the dataset image.
 
     Returns:
-        str: Name of the checkpoint file without directory information.
+        str: Name of the checkpoint file without directory information. The
+        ``"_model"`` suffix mirrors the convention used when exporting flows.
     """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model"
@@ -86,7 +89,8 @@ def get_flow_path(filepath, dataset_root, flows_root):
             storing checkpoints.
 
     Returns:
-        str: Full path to the associated flow checkpoint.
+        str: Full path to the associated flow checkpoint. The caller is
+        responsible for ensuring the parent directory exists.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

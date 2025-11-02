@@ -15,7 +15,9 @@ def load_filenames(path):
     """Enumerate every file contained in ``path``.
 
     The function prints a short summary for each directory it visits to make it
-    obvious how many files were discovered.
+    obvious how many files were discovered. Hidden ``.ipynb_checkpoints``
+    folders are included in the counts; callers should filter them out if
+    needed.
 
     Args:
         path (str): Root directory that should be traversed recursively.
@@ -88,6 +90,8 @@ def tensor_to_im(tensor, w, h):
 
     Args:
         tensor (torch.Tensor): Flattened pixel data with shape ``(w * h, 3)``.
+            The tensor may reside on any device; it will be detached and moved
+            to the CPU before conversion.
         w (int): Target width in pixels.
         h (int): Target height in pixels.
 
@@ -111,19 +115,22 @@ def run_inference(encoder, device, content_im_path, style_im_path,
         device (torch.device): Device used for all tensor computations.
         content_im_path (str): Path to the content image.
         style_im_path (str): Path to the style reference image.
-        compress (float or bool, optional): When set to a positive value the
-            content image is downscaled by this factor before processing. Use
-            ``False`` to disable resizing. Defaults to ``False``.
+        compress (float or bool, optional): When set to a positive, non-zero
+            value the content image is downscaled by this factor (e.g. ``2``
+            halves both spatial dimensions) before encoding. Use ``False`` to
+            disable resizing. Defaults to ``False``.
         enc_steps (int, optional): Number of Euler steps used when integrating
             the flows. Defaults to ``3``.
         strength (float, optional): Relative integration length. Values below
-            ``1`` yield a more subtle transfer. Defaults to ``1.0``.
+            ``1`` yield a more subtle transfer by stopping early. Defaults to
+            ``1.0``.
         crop (bool, optional): Centrally crop both images to a square before
             encoding. Defaults to ``False``.
 
     Returns:
         Tuple[PIL.Image.Image, PIL.Image.Image, PIL.Image.Image, PIL.Image.Image]:
-        Content, latent, stylized and reference images in that order.
+        Possibly resized content image, latent reconstruction, stylized output,
+        and the untouched style reference image.
     """
     with torch.no_grad():
         encoder.eval()
@@ -187,12 +194,13 @@ def run_inference_flow(device, content_flow_path, target_flow_path, content_im_p
             to ``3``.
         strength (float, optional): Relative integration length. Defaults to
             ``1.0``.
-        compress (float, optional): Resize factor applied before stylization.
+        compress (float, optional): Positive resize factor applied before
+            stylization. When ``None`` the original resolution is preserved.
             Defaults to ``None``.
 
     Returns:
-        Tuple[PIL.Image.Image, PIL.Image.Image, PIL.Image.Image]: Content,
-        latent and stylized images.
+        Tuple[PIL.Image.Image, PIL.Image.Image, PIL.Image.Image]: Possibly
+        resized content image, latent reconstruction, and stylized output.
     """
     with torch.no_grad():
         content_im = Image.open(content_im_path).convert('RGB')

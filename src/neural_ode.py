@@ -14,7 +14,9 @@ class NeuralODE(nn.Module):
 
     Args:
         input_dim (int): Dimensionality of the color space that will be
-            transformed (typically ``3`` for RGB).
+            transformed (typically ``3`` for RGB). A scalar time dimension is
+            internally appended which is why ``self.input_dim`` becomes
+            ``input_dim + 1``.
         device (torch.device): Compute device used for parameters and
             integration.
         hidden (int, optional): Width of the hidden layer used to approximate
@@ -51,7 +53,8 @@ class NeuralODE(nn.Module):
         Args:
             e (torch.Tensor): One-dimensional tensor with ``self.total_params``
                 elements that contains ``layer_1`` and ``layer_2`` weights and
-                biases in row-major order.
+                biases in row-major order. The tensor can live on any device;
+                it is reshaped and loaded directly into ``self``.
         """
         assert len(e) == self.total_params
         splits = self.splits
@@ -73,7 +76,9 @@ class NeuralODE(nn.Module):
         """Evaluate the velocity field of the learned flow.
 
         Args:
-            x (torch.Tensor): Batch of sample points with shape ``(N, input_dim)``.
+            x (torch.Tensor): Batch of sample points with shape ``(N, input_dim)``
+                where ``input_dim`` matches the spatial color dimensionality
+                supplied to the constructor.
             t (torch.Tensor): Matching time values with shape ``(N, 1)``.
 
         Returns:
@@ -91,12 +96,14 @@ class NeuralODE(nn.Module):
 
         Args:
             x0 (torch.Tensor): Initial sample locations with shape
-                ``(num_samples, input_dim)``.
+                ``(num_samples, input_dim)``. ``x0`` is cloned and moved to the
+                model's device during integration.
             N (int, optional): Number of Euler steps to take. Defaults to
                 ``10_000``.
             strength (float, optional): Fraction of the trajectory to trace.
                 ``1.0`` follows the full integration horizon while values
-                smaller than ``1`` perform an early stop. Defaults to ``1.0``.
+                smaller than ``1`` perform an early stop based on
+                ``int(strength * N)``. Defaults to ``1.0``.
 
         Returns:
             torch.Tensor: Final sample positions with the same shape as ``x0``.
@@ -123,11 +130,13 @@ class NeuralODE(nn.Module):
 
         Args:
             x0 (torch.Tensor): Initial sample locations with shape
-                ``(num_samples, input_dim)``.
+                ``(num_samples, input_dim)``. The tensor is cloned and moved to
+                the model's device during integration.
             N (int, optional): Number of Euler steps used during integration.
                 Defaults to ``10_000``.
             strength (float, optional): Fraction of the trajectory to evaluate
-                before terminating early. Defaults to ``1.0``.
+                before terminating once ``i`` exceeds ``int(strength * N)``.
+                Defaults to ``1.0``.
 
         Returns:
             torch.Tensor: Final sample positions after reverse integration.
@@ -161,7 +170,7 @@ def train_ode(model, lr, base_x, targ_x, samples, sample_size, tt=None, text=Non
         text (str or None): Prefix appended to the progress bar description.
             Defaults to ``None``.
         shuffle (bool, optional): Whether to resample ``base_x`` on every
-            iteration. Defaults to ``True``.
+            iteration (``targ_x`` is always resampled). Defaults to ``True``.
     """
     data_size = base_x.shape[0]
     device = model.device
@@ -232,6 +241,7 @@ def create_save_path(filepath, dataset_root, flows_root):
 
     Returns:
         str: Directory that mirrors the dataset structure under ``flows_root``.
+            The directory is created on disk if it does not yet exist.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

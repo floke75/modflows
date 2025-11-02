@@ -32,7 +32,9 @@ def load_filenames(path):
         path (str): Root directory that contains the dataset images.
 
     Returns:
-        list[str]: Absolute paths to every discovered file.
+        list[str]: Absolute paths to every discovered file. This helper performs
+        no filtering, so non-image files need to be excluded downstream if
+        present.
     """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
@@ -81,7 +83,8 @@ def get_flow_id(filepath):
         filepath (str): Absolute path to the dataset image.
 
     Returns:
-        str: Checkpoint filename component without directory information.
+        str: Checkpoint filename component without directory information. The
+        ``"_model_515"`` suffix encodes the flow dimensionality.
     """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model_515"
@@ -97,6 +100,7 @@ def create_save_path(filepath, dataset_root, flows_root):
 
     Returns:
         str: Directory path under ``flows_root`` matching the dataset structure.
+        The directory is created if it does not already exist.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)

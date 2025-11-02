@@ -15,10 +15,12 @@ INPUT_SIZE = 528
 def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
     """Prepare an RGB image so it can be consumed by :class:`Encoder`.
 
-    The preprocessing pipeline mirrors the transformation stack used by the
-    EfficientNet encoders.  Depending on ``image`` the function either returns
-    the transformed PIL image (to allow manual inspection) or a tensor with the
-    channel-first layout that the encoder expects.
+    Depending on ``image`` the function either returns the transformed PIL
+    image (to allow manual inspection) or a tensor with the channel-first layout
+    that the encoder expects. The pixel values are scaled to ``[0, 1]`` but no
+    normalization specific to EfficientNet weights is applied here—those
+    statistics are injected later through :meth:`Encoder.forward` when the
+    backbone's native preprocessing pipeline is executed.
 
     Args:
         pil_image (PIL.Image.Image): Input image in RGB mode.
@@ -31,9 +33,9 @@ def enc_preprocess(pil_image, crop=False, image=False, rand_trans=False):
             training. Defaults to ``False``.
 
     Returns:
-        torch.Tensor or PIL.Image.Image: When ``image`` is ``False`` a float
-        tensor with shape ``(3, INPUT_SIZE, INPUT_SIZE)`` and values in ``[0, 1]``.
-        Otherwise the transformed PIL image.
+        torch.Tensor or PIL.Image.Image: When ``image`` is ``False`` a
+        ``float32`` tensor on the CPU with shape ``(3, INPUT_SIZE, INPUT_SIZE)``
+        and values in ``[0, 1]``. Otherwise the transformed PIL image.
     """
     im = pil_image
     im_size = (INPUT_SIZE, INPUT_SIZE)
@@ -60,7 +62,9 @@ class Encoder(nn.Module):
     :class:`~src.neural_ode.NeuralODE` color flow.  The ``input_dim``,
     ``hidden`` and ``output_dim`` arguments describe the architecture of that
     downstream flow network and are used to reshape the flattened EfficientNet
-    logits into layer-wise weights.
+    logits into layer-wise weights.  ``input_dim`` must match the
+    ``NeuralODE.input_dim`` attribute (which already accounts for the appended
+    time channel), i.e. it is typically ``color_channels + 1``.
 
     Args:
         k_dim (int): Number of parameters the encoder should output (equal to
@@ -107,7 +111,7 @@ class Encoder(nn.Module):
 
         Args:
             im1 (torch.Tensor): Batch of images with shape ``(N, 3, H, W)`` and
-                values in ``[0, 1]``.
+                values in ``[0, 1]`` on any device supported by torchvision.
 
         Returns:
             torch.Tensor: Flattened parameter vectors with shape ``(N, k_dim)``.
@@ -123,13 +127,15 @@ class Encoder(nn.Module):
         Args:
             e (torch.Tensor): Batch of flattened parameter vectors produced by
                 :meth:`forward` with shape ``(N, k_dim)``.
-            x (torch.Tensor): Sampled RGB values of shape ``(N, M, input_dim)``
-                that will be transformed by the flow network.
+            x (torch.Tensor): Sampled RGB values of shape ``(N, M, C)`` where
+                ``C = self.input_dim - 1`` (the ``-1`` accounts for the time
+                channel that is concatenated internally).
             t (torch.Tensor): Time values with shape ``(N, M, 1)`` associated
                 with each sample in ``x``.
 
         Returns:
-            torch.Tensor: Flow predictions with shape ``(N, M, output_dim)``.
+            torch.Tensor: Flow predictions with shape ``(N, M, output_dim)`` on
+                the same device as ``x`` and ``t``.
         """
         splits = self.splits
         batch_size = e.shape[0]
