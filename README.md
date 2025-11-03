@@ -22,8 +22,8 @@ Please refer to the
 
 ### Prerequisites
 
-* Python 3.8+
-* PyTorch
+* Python 3.9–3.13 (newer releases are recommended for the best CUDA 13 support)
+* PyTorch with CUDA 13.0 wheels (see installation notes below)
 * torchvision
 * NumPy
 * Matplotlib
@@ -41,8 +41,9 @@ Please refer to the
    ```bash
    cd modflows
    ```
-3. Install the required dependencies:
+3. Install the required dependencies. The `requirements.txt` file now targets NVIDIA GPUs such as the RTX 5090 by pulling the CUDA 13.0 (cu130) wheels from the official PyTorch index. If you prefer to install PyTorch manually, run the first command below before installing the remaining packages:
    ```bash
+   pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
    pip install -r requirements.txt
    ```
 
