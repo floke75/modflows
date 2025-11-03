@@ -1,25 +1,22 @@
 import os
+from datetime import datetime
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-import matplotlib.pyplot as plt
-
-from datetime import datetime
-from tqdm import tqdm, trange
 from PIL import Image
-from torchvision.transforms import v2
-from torchvision.transforms import InterpolationMode
-from torch.distributions.multivariate_normal import MultivariateNormal
-from mpl_toolkits.mplot3d import Axes3D
-
 from einops import einsum
-from src.neural_ode import NeuralODE, train_ode
-from src.encoder import Encoder, enc_preprocess
-from src.inference import print_images
+from mpl_toolkits.mplot3d import Axes3D
+from torch.distributions.multivariate_normal import MultivariateNormal
+from tqdm import tqdm, trange
+from torchvision.transforms import InterpolationMode, v2
 
-from src.encoder import INPUT_SIZE
+from src.encoder import INPUT_SIZE, Encoder, enc_preprocess
+from src.inference import print_images
+from src.neural_ode import NeuralODE, train_ode
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
