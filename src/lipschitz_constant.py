@@ -1,6 +1,7 @@
 """Utilities for estimating Lipschitz constants between color transforms."""
 
 import os
+import numbers
 
 import numpy as np
 from PIL import Image
@@ -9,7 +10,9 @@ from tqdm import tqdm
 from src.encoder import enc_preprocess
 
 
-def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
+def _to_pixel_matrix(
+    image: np.ndarray,
+) -> tuple[np.ndarray, tuple[int, int, int]]:
     """Converts an image tensor to an ``(num_pixels, 3)`` RGB matrix.
 
     Args:
@@ -17,7 +20,8 @@ def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
             ``(3, H, W)`` format.
 
     Returns:
-        np.ndarray: Matrix containing RGB values for each pixel.
+        tuple[np.ndarray, tuple[int, int, int]]: Matrix containing RGB values for
+        each pixel and the canonical channel-last shape ``(H, W, 3)``.
 
     Raises:
         ValueError: If the image does not have three dimensions or three channels.
@@ -39,7 +43,8 @@ def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
             f"dimension; received shape {image.shape}"
         )
 
-    return pixels.reshape(-1, 3)
+    channel_last = np.asarray(pixels)
+    return channel_last.reshape(-1, 3), channel_last.shape
 
 
 def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
@@ -60,8 +65,19 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
             output differences are non-zero while the corresponding input
             differences are zero.
     """
-    input_flat = _to_pixel_matrix(content_image)
-    output_flat = _to_pixel_matrix(stylized_image)
+    if isinstance(num_samples, bool) or not isinstance(num_samples, numbers.Integral):
+        raise TypeError("num_samples must be specified as an integer count")
+
+    if num_samples <= 0:
+        raise ValueError("num_samples must be a positive integer")
+
+    input_flat, input_shape = _to_pixel_matrix(content_image)
+    output_flat, output_shape = _to_pixel_matrix(stylized_image)
+
+    if input_shape != output_shape:
+        raise ValueError(
+            "content_image and stylized_image must have identical spatial dimensions"
+        )
 
     indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
 

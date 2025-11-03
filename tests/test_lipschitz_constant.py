@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 import numpy as np
+import pytest
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -49,3 +50,38 @@ def test_compute_lipschitz_vectorized_constant_maps_to_constant():
     lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=64)
 
     assert lipschitz == 0.0
+
+
+def test_compute_lipschitz_vectorized_requires_positive_samples():
+    content = np.ones((2, 2, 3), dtype=np.float32)
+    stylized = np.ones_like(content)
+
+    with pytest.raises(ValueError, match="positive integer"):
+        compute_lipschitz_vectorized(content, stylized, num_samples=0)
+
+
+def test_compute_lipschitz_vectorized_requires_matching_shapes():
+    content = np.ones((2, 2, 3), dtype=np.float32)
+    stylized = np.ones((3, 3, 3), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="identical spatial dimensions"):
+        compute_lipschitz_vectorized(content, stylized, num_samples=4)
+
+
+def test_compute_lipschitz_vectorized_requires_matching_aspect_ratio():
+    content = np.ones((2, 6, 3), dtype=np.float32)
+    stylized = np.ones((6, 2, 3), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="identical spatial dimensions"):
+        compute_lipschitz_vectorized(content, stylized, num_samples=8)
+
+
+def test_compute_lipschitz_vectorized_requires_integer_samples():
+    content = np.ones((2, 2, 3), dtype=np.float32)
+    stylized = np.ones_like(content)
+
+    with pytest.raises(TypeError, match="integer count"):
+        compute_lipschitz_vectorized(content, stylized, num_samples=2.5)
+
+    with pytest.raises(TypeError, match="integer count"):
+        compute_lipschitz_vectorized(content, stylized, num_samples=True)
