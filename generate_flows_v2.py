@@ -1,16 +1,14 @@
 import os
+from datetime import datetime
+
 import numpy as np
 import torch
-from datetime import datetime
-from tqdm import tqdm, trange
 from PIL import Image
 from torch.distributions.multivariate_normal import MultivariateNormal
+from tqdm import tqdm, trange
 
+from src.encoder import INPUT_SIZE, Encoder, enc_preprocess
 from src.neural_ode import NeuralODE, train_ode
-from src.encoder import Encoder, enc_preprocess
-
-from src.encoder import INPUT_SIZE
-
 from src.utils import clean_dirs
  
 device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
