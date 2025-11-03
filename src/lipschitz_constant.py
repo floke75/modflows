@@ -42,7 +42,9 @@ def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
     return pixels.reshape(-1, 3)
 
 
-def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
+def compute_lipschitz_vectorized(
+    content_image, stylized_image, num_samples, rng=None
+):
     """Estimate an upper bound on the Lipschitz constant between two RGB clouds.
 
     Args:
@@ -52,7 +54,12 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
             pixel matrix.
         stylized_image (np.ndarray): Array with RGB samples from the stylized
             output image using the same supported layouts as ``content_image``.
+            Inputs with integer dtypes are converted to ``float32`` before
+            distances are computed to avoid wrap-around behaviour.
         num_samples (int): The number of random pixel pairs to evaluate.
+        rng (np.random.Generator, optional): Random number generator used to
+            draw pixel indices. When ``None`` a new default generator is
+            constructed. Defaults to ``None``.
 
     Returns:
         float: Maximum ratio of pairwise distances ``||Δstylized|| / ||Δcontent||``
@@ -60,10 +67,16 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
             output differences are non-zero while the corresponding input
             differences are zero.
     """
-    input_flat = _to_pixel_matrix(content_image)
-    output_flat = _to_pixel_matrix(stylized_image)
+    if num_samples <= 0:
+        raise ValueError("num_samples must be a positive integer")
 
-    indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
+    if rng is None:
+        rng = np.random.default_rng()
+
+    input_flat = _to_pixel_matrix(content_image).astype(np.float32, copy=False)
+    output_flat = _to_pixel_matrix(stylized_image).astype(np.float32, copy=False)
+
+    indices = rng.integers(0, len(input_flat), size=(num_samples, 2), endpoint=False)
 
     dist_input = np.linalg.norm(
         input_flat[indices[:, 0]] - input_flat[indices[:, 1]], axis=1

@@ -17,7 +17,7 @@ def test_compute_lipschitz_vectorized_scaling_channel_last():
     content = rng.normal(size=(8, 8, 3))
     stylized = 1.5 * content
 
-    lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=200)
+    lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=200, rng=rng)
 
     assert np.isclose(lipschitz, 1.5)
 
@@ -27,7 +27,7 @@ def test_compute_lipschitz_vectorized_scaling_channel_first():
     content = rng.normal(size=(3, 6, 5))
     stylized = 0.75 * content
 
-    lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=200)
+    lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=200, rng=rng)
 
     assert np.isclose(lipschitz, 0.75)
 
@@ -49,3 +49,18 @@ def test_compute_lipschitz_vectorized_constant_maps_to_constant():
     lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=64)
 
     assert lipschitz == 0.0
+
+
+def test_compute_lipschitz_vectorized_handles_uint8_inputs():
+    rng = np.random.default_rng(7)
+    base = rng.integers(0, 256, size=(4, 4, 3), dtype=np.uint8)
+    stylized = np.minimum(base.astype(np.uint16) + 10, 255).astype(np.uint8)
+
+    lipschitz = compute_lipschitz_vectorized(base, stylized, num_samples=128, rng=rng)
+
+    assert np.isclose(lipschitz, 1.0)
+
+
+def test_compute_lipschitz_vectorized_rejects_invalid_sample_count():
+    with np.testing.assert_raises(ValueError):
+        compute_lipschitz_vectorized(np.zeros((2, 2, 3)), np.zeros((2, 2, 3)), 0)
