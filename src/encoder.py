@@ -149,16 +149,16 @@ class Encoder(nn.Module):
             torch.Size([batch_size, self.output_dim]),
         ]
         # e = [batch_size, params_size]
-        e0 = e[:, splits[0]:splits[1]].reshape(shapes[0])
-        e1 = e[:, splits[1]:splits[2]].reshape(shapes[1])
-        e2 = e[:, splits[2]:splits[3]].reshape(shapes[2])
-        e3 = e[:, splits[3]:splits[4]].reshape(shapes[3])
+        e0 = e[:, splits[0] : splits[1]].reshape(shapes[0])
+        e1 = e[:, splits[1] : splits[2]].reshape(shapes[1])
+        e2 = e[:, splits[2] : splits[3]].reshape(shapes[2])
+        e3 = e[:, splits[3] : splits[4]].reshape(shapes[3])
         e1 = e1.unsqueeze(1)
         e3 = e3.unsqueeze(1)
         # x = [batch_size, sample_size, channels]
         # t = [batch_size, sample_size, 1]
         xt = torch.cat([x, t], dim=-1)
-        xt = einsum(xt, e0, 'i j k, i n k -> i j n') + e1
+        xt = einsum(xt, e0, "i j k, i n k -> i j n") + e1
         xt = torch.tanh(xt)
-        xt = einsum(xt, e2, 'i j k, i n k -> i j n') + e3
+        xt = einsum(xt, e2, "i j k, i n k -> i j n") + e3
         return xt

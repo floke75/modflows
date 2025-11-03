@@ -88,6 +88,7 @@ def compute_lipschitz_vectorized(x, y, num_samples):
     return float(np.max(lipschitz_values))
 
 
+
 if __name__ == "__main__":
     num_samples = 50000
     path_dir = "V7_encoder_epoch_700000"  # Your directory name
