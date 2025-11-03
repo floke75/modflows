@@ -1,3 +1,5 @@
+"""Tests for the Lipschitz constant estimation utilities."""
+
 import pathlib
 import sys
 
