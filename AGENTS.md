@@ -26,6 +26,8 @@ Training data is expected under `data/` (mirroring the original experiments). Fl
 * Format Python code with `black` and keep imports sorted (``isort`` compatible).
 * Run `python -m compileall src` before submitting a PR to catch syntax errors. Add targeted unit tests under `tests/` when extending the core library.
 * Large training scripts log progress with `tqdm`; follow the existing patterns when adding new loops so notebook and CLI usage stay consistent.
+* Avoid introducing mocks or stubs in tests unless they are absolutely necessary, demonstrably safe, and clearly justified in accompanying documentation or comments.
+* Ensure the test environment has ``numpy``, ``pillow``, ``torch``, ``torchvision``, and ``einops`` installed (matching the versions pinned in ``requirements.txt``) before running the test suite to prevent dependency-related failures.
 
 ### Communication expectations
 

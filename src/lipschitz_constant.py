@@ -42,24 +42,26 @@ def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
     return pixels.reshape(-1, 3)
 
 
-def compute_lipschitz_vectorized(x, y, num_samples):
+def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
     """Estimate an upper bound on the Lipschitz constant between two RGB clouds.
 
     Args:
-        x (np.ndarray): Array representing RGB samples from the stylized image.
-            Accepts either channel-last ``(H, W, 3)`` or channel-first ``(3, H, W)``
-            layout and converts it internally to a pixel matrix.
-        y (np.ndarray): Array with RGB samples from the reference image using the
-            same supported layouts as ``x``.
+        content_image (np.ndarray): Array representing RGB samples from the
+            content image. Accepts either channel-last ``(H, W, 3)`` or
+            channel-first ``(3, H, W)`` layout and converts it internally to a
+            pixel matrix.
+        stylized_image (np.ndarray): Array with RGB samples from the stylized
+            output image using the same supported layouts as ``content_image``.
         num_samples (int): The number of random pixel pairs to evaluate.
 
     Returns:
-        float: Maximum ratio of pairwise distances found across the sampled
-            pairs. Returns ``np.inf`` when the sampled output differences are
-            non-zero while the corresponding input differences are zero.
+        float: Maximum ratio of pairwise distances ``||Δstylized|| / ||Δcontent||``
+            found across the sampled pairs. Returns ``np.inf`` when the sampled
+            output differences are non-zero while the corresponding input
+            differences are zero.
     """
-    input_flat = _to_pixel_matrix(x)
-    output_flat = _to_pixel_matrix(y)
+    input_flat = _to_pixel_matrix(content_image)
+    output_flat = _to_pixel_matrix(stylized_image)
 
     indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
 
@@ -86,7 +88,6 @@ def compute_lipschitz_vectorized(x, y, num_samples):
         )
 
     return float(np.max(lipschitz_values))
-
 
 
 if __name__ == "__main__":
@@ -118,9 +119,9 @@ if __name__ == "__main__":
     lipschitz_constants = []
     for idx in tqdm(range(len(stylization_results))):
         stylized_tensor = enc_preprocess(Image.open(stylization_results[idx]))
-        reference_tensor = enc_preprocess(Image.open(content_images[idx]))
+        content_tensor = enc_preprocess(Image.open(content_images[idx]))
         L_max = compute_lipschitz_vectorized(
-            stylized_tensor.numpy(), reference_tensor.numpy(), num_samples
+            content_tensor.numpy(), stylized_tensor.numpy(), num_samples
         )
         lipschitz_constants.append(L_max)
 
