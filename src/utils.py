@@ -1,5 +1,7 @@
 import os
 import shutil
+from typing import Iterable
+
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -10,10 +12,13 @@ from PIL import Image
 
 
 def clean_dirs(dir_list):
-    """Removes .ipynb_checkpoints directories.
+    """Remove Jupyter checkpoint folders from the provided directories.
 
     Args:
-        dir_list (list): A list of directories to clean.
+        dir_list (Iterable[str]): Directories whose ``.ipynb_checkpoints``
+            folders should be deleted if present. Each entry is expected to be
+            the directory prefix (e.g. ``"data/train/"``) without the trailing
+            ``.ipynb_checkpoints`` component.
     """
     for dir_name in dir_list:
         if os.path.exists(dir_name + '.ipynb_checkpoints'):
@@ -21,14 +26,15 @@ def clean_dirs(dir_list):
 
 
 def load_filenames(path, verbose=False):
-    """Loads all filenames from a directory.
+    """List files contained in ``path`` while optionally logging progress.
 
     Args:
-        path (str): The path to the directory.
-        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+        path (str): Directory that should be traversed recursively.
+        verbose (bool, optional): When ``True`` print the number of files found
+            in each visited directory. Defaults to ``False``.
 
     Returns:
-        list: A list of filenames.
+        list[str]: Paths to all discovered files.
     """
     dataset_filenames = []
     for dirpath, dirnames, filenames in os.walk(path):
@@ -43,15 +49,15 @@ def load_filenames(path, verbose=False):
 
 
 def create_save_path(filepath, dataset_root, flows_root):
-    """Creates a save path for a model.
+    """Construct the directory path used to store a flow checkpoint.
 
     Args:
-        filepath (str): The path to the image.
-        dataset_root (str): The root directory of the dataset.
-        flows_root (str): The root directory of the flows.
+        filepath (str): Absolute path of the dataset image.
+        dataset_root (str): Root directory of the dataset.
+        flows_root (str): Root directory for storing flow checkpoints.
 
     Returns:
-        str: The save path.
+        str: Directory mirroring ``filepath`` under ``flows_root``.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)
@@ -63,28 +69,28 @@ def create_save_path(filepath, dataset_root, flows_root):
 
 
 def get_flow_id(filepath):
-    """Gets the flow ID from a filepath.
+    """Derive a deterministic checkpoint filename from an image path.
 
     Args:
-        filepath (str): The path to the file.
+        filepath (str): Path to the dataset image.
 
     Returns:
-        str: The flow ID.
+        str: Filename of the associated flow checkpoint.
     """
     filename = filepath.split("/")[-1].split(".")[0]
     return filename + "_model.pt"
 
 
 def get_flow_path(filepath, dataset_root, flows_root):
-    """Gets the flow path from a filepath.
+    """Return the full checkpoint path for an image.
 
     Args:
-        filepath (str): The path to the file.
-        dataset_root (str): The root directory of the dataset.
-        flows_root (str): The root directory of the flows.
+        filepath (str): Absolute path of the image in the dataset.
+        dataset_root (str): Root directory that contains the dataset.
+        flows_root (str): Root directory containing the generated flows.
 
     Returns:
-        str: The flow path.
+        str: Full path to the checkpoint file for ``filepath``.
     """
     filename = filepath.split("/")[-1]
     start_char = len(dataset_root)
@@ -95,17 +101,20 @@ def get_flow_path(filepath, dataset_root, flows_root):
 
 
 def print_images(pil_imgs, with_density=False, points=200, titles=None, s=10):
-    """Prints a list of PIL images.
+    """Render images with optional RGB density scatter plots.
 
     Args:
-        pil_imgs (list): A list of PIL images.
-        with_density (bool, optional): Whether to print the density of the image. Defaults to False.
-        points (int, optional): The number of points to use for the density plot. Defaults to 200.
-        titles (list, optional): A list of titles for the images. Defaults to None.
-        s (int, optional): The size of the points in the density plot. Defaults to 10.
+        pil_imgs (Iterable[PIL.Image.Image]): Images to render.
+        with_density (bool, optional): Append an RGB scatter plot for each
+            image when ``True``. Defaults to ``False``.
+        points (int, optional): Number of pixels to subsample for the density
+            plot. Defaults to ``200``.
+        titles (Iterable[str], optional): Titles to display above each image.
+            Defaults to ``None``.
+        s (int, optional): Scatter point size. Defaults to ``10``.
 
     Returns:
-        matplotlib.figure.Figure: The figure containing the images.
+        matplotlib.figure.Figure: Matplotlib figure with all rendered content.
     """
     fig = plt.figure(figsize=(20, 10))
     n = len(pil_imgs)
