@@ -59,9 +59,27 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
             found across the sampled pairs. Returns ``np.inf`` when the sampled
             output differences are non-zero while the corresponding input
             differences are zero.
+
+    Raises:
+        TypeError: If ``num_samples`` is not an integer value.
+        ValueError: If ``num_samples`` is not strictly positive or the two
+            images contain a different number of pixels.
     """
+    if not isinstance(num_samples, (int, np.integer)):
+        raise TypeError(
+            "num_samples must be an integer specifying the number of pixel pairs"
+        )
+
+    if num_samples <= 0:
+        raise ValueError("num_samples must be strictly positive")
+
     input_flat = _to_pixel_matrix(content_image)
     output_flat = _to_pixel_matrix(stylized_image)
+
+    if len(input_flat) != len(output_flat):
+        raise ValueError(
+            "content and stylized images must contain the same number of pixels"
+        )
 
     indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
 

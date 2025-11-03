@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 import numpy as np
+import pytest
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -49,3 +50,25 @@ def test_compute_lipschitz_vectorized_constant_maps_to_constant():
     lipschitz = compute_lipschitz_vectorized(content, stylized, num_samples=64)
 
     assert lipschitz == 0.0
+
+
+def test_compute_lipschitz_vectorized_requires_positive_samples():
+    content = np.ones((2, 2, 3), dtype=np.float32)
+
+    with pytest.raises(ValueError):
+        compute_lipschitz_vectorized(content, content, num_samples=0)
+
+
+def test_compute_lipschitz_vectorized_requires_matching_pixel_counts():
+    content = np.zeros((2, 2, 3), dtype=np.float32)
+    stylized = np.zeros((4, 4, 3), dtype=np.float32)
+
+    with pytest.raises(ValueError):
+        compute_lipschitz_vectorized(content, stylized, num_samples=8)
+
+
+def test_compute_lipschitz_vectorized_rejects_non_integer_samples():
+    content = np.ones((2, 2, 3), dtype=np.float32)
+
+    with pytest.raises(TypeError):
+        compute_lipschitz_vectorized(content, content, num_samples=3.14)
