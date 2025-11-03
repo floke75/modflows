@@ -28,3 +28,22 @@ def test_compute_lipschitz_vectorized_scaling_channel_first():
     lipschitz = compute_lipschitz_vectorized(base, scaled, num_samples=200)
 
     assert np.isclose(lipschitz, 0.75)
+
+
+def test_compute_lipschitz_vectorized_detects_infinite_lipschitz():
+    base = np.zeros((4, 4, 3), dtype=np.float32)
+    output = np.zeros_like(base)
+    output[0, 0] = np.array([1.0, 0.0, 0.0])
+
+    lipschitz = compute_lipschitz_vectorized(base, output, num_samples=64)
+
+    assert np.isinf(lipschitz)
+
+
+def test_compute_lipschitz_vectorized_constant_maps_to_constant():
+    base = np.ones((4, 4, 3), dtype=np.float32)
+    output = np.ones_like(base)
+
+    lipschitz = compute_lipschitz_vectorized(base, output, num_samples=64)
+
+    assert lipschitz == 0.0

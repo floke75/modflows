@@ -49,7 +49,9 @@ def compute_lipschitz_vectorized(inputs, outputs, num_samples):
         num_samples (int): The number of random pixel pairs to evaluate.
 
     Returns:
-        float: The maximum sampled Lipschitz constant.
+        float: The maximum sampled Lipschitz constant. Returns ``np.inf`` when
+            the sampled output differences are non-zero while the corresponding
+            input differences are zero.
     """
     input_flat = _to_pixel_matrix(inputs)
     output_flat = _to_pixel_matrix(outputs)
@@ -63,11 +65,22 @@ def compute_lipschitz_vectorized(inputs, outputs, num_samples):
         output_flat[indices[:, 0]] - output_flat[indices[:, 1]], axis=1
     )
 
-    lipschitz_values = np.divide(
-        dist_output, dist_input, out=np.zeros_like(dist_output), where=dist_input != 0
-    )
+    lipschitz_values = np.zeros_like(dist_output)
+    nonzero_mask = dist_input != 0
+    if np.any(nonzero_mask):
+        lipschitz_values[nonzero_mask] = np.divide(
+            dist_output[nonzero_mask], dist_input[nonzero_mask]
+        )
 
-    return np.max(lipschitz_values)
+    zero_mask = ~nonzero_mask
+    if np.any(zero_mask):
+        lipschitz_values[zero_mask] = np.where(
+            np.isclose(dist_output[zero_mask], 0.0),
+            0.0,
+            np.inf,
+        )
+
+    return float(np.max(lipschitz_values))
 
 
 if __name__ == "__main__":
