@@ -1,3 +1,5 @@
+"""Utilities for estimating Lipschitz constants between color transforms."""
+
 import os
 
 import numpy as np
@@ -7,19 +9,57 @@ from tqdm import tqdm
 from src.encoder import enc_preprocess
 
 
-def compute_lipschitz_vectorized(inputs, outputs, num_samples):
-    """Computes the Lipschitz constant between paired input and output pixels.
+def _to_pixel_matrix(image: np.ndarray) -> np.ndarray:
+    """Converts an image tensor to an ``(num_pixels, 3)`` RGB matrix.
 
     Args:
-        inputs (np.ndarray): The input image used to drive the color transformation.
-        outputs (np.ndarray): The resulting stylized image after the transformation.
+        image (np.ndarray): The image in channel-last ``(H, W, 3)`` or channel-first
+            ``(3, H, W)`` format.
+
+    Returns:
+        np.ndarray: Matrix containing RGB values for each pixel.
+
+    Raises:
+        ValueError: If the image does not have three dimensions or three channels.
+    """
+
+    if image.ndim != 3:
+        raise ValueError(
+            "image must be a 3D array with explicit channel information; received "
+            f"shape {image.shape}"
+        )
+
+    if image.shape[-1] == 3:  # (H, W, 3)
+        pixels = image
+    elif image.shape[0] == 3:  # (3, H, W)
+        pixels = np.moveaxis(image, 0, -1)
+    else:
+        raise ValueError(
+            "image must provide exactly three channels in either the first or last "
+            f"dimension; received shape {image.shape}"
+        )
+
+    return pixels.reshape(-1, 3)
+
+
+def compute_lipschitz_vectorized(x, y, num_samples):
+    """Estimate an upper bound on the Lipschitz constant between two RGB clouds.
+
+    Args:
+        x (np.ndarray): Array representing RGB samples from the stylized image.
+            Accepts either channel-last ``(H, W, 3)`` or channel-first ``(3, H, W)``
+            layout and converts it internally to a pixel matrix.
+        y (np.ndarray): Array with RGB samples from the reference image using the
+            same supported layouts as ``x``.
         num_samples (int): The number of random pixel pairs to evaluate.
 
     Returns:
-        float: The maximum sampled Lipschitz constant.
+        float: Maximum ratio of pairwise distances found across the sampled
+            pairs. Returns ``np.inf`` when the sampled output differences are
+            non-zero while the corresponding input differences are zero.
     """
-    input_flat = inputs.reshape(-1, 3)
-    output_flat = outputs.reshape(-1, 3)
+    input_flat = _to_pixel_matrix(x)
+    output_flat = _to_pixel_matrix(y)
 
     indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
 
@@ -30,11 +70,23 @@ def compute_lipschitz_vectorized(inputs, outputs, num_samples):
         output_flat[indices[:, 0]] - output_flat[indices[:, 1]], axis=1
     )
 
-    lipschitz_values = np.divide(
-        dist_output, dist_input, out=np.zeros_like(dist_output), where=dist_input != 0
-    )
+    lipschitz_values = np.zeros_like(dist_output)
+    nonzero_mask = dist_input != 0
+    if np.any(nonzero_mask):
+        lipschitz_values[nonzero_mask] = np.divide(
+            dist_output[nonzero_mask], dist_input[nonzero_mask]
+        )
 
-    return np.max(lipschitz_values)
+    zero_mask = ~nonzero_mask
+    if np.any(zero_mask):
+        lipschitz_values[zero_mask] = np.where(
+            np.isclose(dist_output[zero_mask], 0.0),
+            0.0,
+            np.inf,
+        )
+
+    return float(np.max(lipschitz_values))
+
 
 
 if __name__ == "__main__":
@@ -65,14 +117,12 @@ if __name__ == "__main__":
 
     lipschitz_constants = []
     for idx in tqdm(range(len(stylization_results))):
-        content_tensor = enc_preprocess(Image.open(content_images[idx]))
         stylized_tensor = enc_preprocess(Image.open(stylization_results[idx]))
+        reference_tensor = enc_preprocess(Image.open(content_images[idx]))
         L_max = compute_lipschitz_vectorized(
-            content_tensor.numpy(), stylized_tensor.numpy(), num_samples
+            stylized_tensor.numpy(), reference_tensor.numpy(), num_samples
         )
         lipschitz_constants.append(L_max)
-
-    lipschitz_constants = np.array(lipschitz_constants)
 
     lipschitz_constants = np.array(lipschitz_constants)
 
