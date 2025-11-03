@@ -13,6 +13,25 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.lipschitz_constant import compute_lipschitz_vectorized
 
 
+class _FixedChoiceRNG:
+    """Deterministic RNG stub that returns a pre-defined choice matrix."""
+
+    def __init__(self, result: np.ndarray):
+        self._result = np.asarray(result)
+        self.calls = 0
+
+    def choice(self, *args, **kwargs):  # noqa: D401
+        """Mimic ``np.random.Generator.choice`` with a fixed result."""
+
+        size = kwargs.get("size")
+        if size is None and len(args) >= 2:
+            size = args[1]
+
+        assert size == self._result.shape
+        self.calls += 1
+        return self._result
+
+
 def test_compute_lipschitz_vectorized_scaling_channel_last():
     rng = np.random.default_rng(42)
     content = rng.normal(size=(8, 8, 3))
@@ -85,3 +104,30 @@ def test_compute_lipschitz_vectorized_requires_integer_samples():
 
     with pytest.raises(TypeError, match="integer count"):
         compute_lipschitz_vectorized(content, stylized, num_samples=True)
+
+
+def test_compute_lipschitz_vectorized_handles_uint8_inputs():
+    content = np.array([[[0, 0, 0], [255, 255, 255]]], dtype=np.uint8)
+    stylized = np.array([[[0, 0, 0], [128, 128, 128]]], dtype=np.uint8)
+
+    fixed_indices = _FixedChoiceRNG(np.array([[0, 1]]))
+    lipschitz = compute_lipschitz_vectorized(
+        content, stylized, num_samples=1, rng=fixed_indices
+    )
+
+    expected = np.linalg.norm([128, 128, 128]) / np.linalg.norm([255, 255, 255])
+    assert np.isclose(lipschitz, expected)
+    assert fixed_indices.calls == 1
+
+
+def test_compute_lipschitz_vectorized_requires_rng_with_choice():
+    class NoChoice:
+        pass
+
+    with pytest.raises(TypeError, match="choice"):
+        compute_lipschitz_vectorized(
+            np.zeros((1, 1, 3)),
+            np.zeros((1, 1, 3)),
+            num_samples=1,
+            rng=NoChoice(),
+        )

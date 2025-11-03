@@ -47,7 +47,12 @@ def _to_pixel_matrix(
     return channel_last.reshape(-1, 3), channel_last.shape
 
 
-def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
+def compute_lipschitz_vectorized(
+    content_image,
+    stylized_image,
+    num_samples,
+    rng=None,
+):
     """Estimate an upper bound on the Lipschitz constant between two RGB clouds.
 
     Args:
@@ -58,6 +63,10 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
         stylized_image (np.ndarray): Array with RGB samples from the stylized
             output image using the same supported layouts as ``content_image``.
         num_samples (int): The number of random pixel pairs to evaluate.
+        rng (np.random.Generator | np.random.RandomState | None): Optional
+            random number generator. When provided, ``rng.choice`` is used to
+            sample the pixel indices. Defaults to the global ``np.random``
+            module for backwards compatibility.
 
     Returns:
         float: Maximum ratio of pairwise distances ``||Δstylized|| / ||Δcontent||``
@@ -79,7 +88,16 @@ def compute_lipschitz_vectorized(content_image, stylized_image, num_samples):
             "content_image and stylized_image must have identical spatial dimensions"
         )
 
-    indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
+    input_flat = input_flat.astype(np.float32, copy=False)
+    output_flat = output_flat.astype(np.float32, copy=False)
+
+    if rng is None:
+        indices = np.random.choice(len(input_flat), (num_samples, 2), replace=True)
+    else:
+        if not hasattr(rng, "choice"):
+            raise TypeError("rng must provide a choice method compatible with numpy")
+
+        indices = rng.choice(len(input_flat), (num_samples, 2), replace=True)
 
     dist_input = np.linalg.norm(
         input_flat[indices[:, 0]] - input_flat[indices[:, 1]], axis=1
